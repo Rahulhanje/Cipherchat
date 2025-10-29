@@ -6,7 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:anchor": "ts-mocha -p ./tests/tsconfig.json -t 1000000 tests/**/*.ts",
+    "anchor:build": "anchor build",
+    "anchor:deploy": "anchor deploy --provider.cluster devnet",
+    "anchor:deploy:local": "anchor deploy",
+    "anchor:test": "anchor test",
+    "anchor:test:local": "anchor test --skip-local-validator",
+    "anchor:keys": "anchor keys list",
+    "anchor:localnet": "solana-test-validator",
+    "program:logs": "solana logs",
+    "solana:config": "solana config get",
+    "solana:airdrop": "solana airdrop 2",
+    "solana:balance": "solana balance"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
@@ -26,12 +38,18 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bn.js": "^5.2.0",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "chai": "^6.2.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
+    "mocha": "^11.7.4",
     "tailwindcss": "^4",
+    "ts-mocha": "^11.1.0",
     "typescript": "^5"
   }
 }

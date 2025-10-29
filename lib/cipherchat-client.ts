@@ -1,32 +1,64 @@
-import { Program, AnchorProvider, BN } from '@coral-xyz/anchor';
-import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { AnchorWallet } from '@solana/wallet-adapter-react';
 
 // Type will be generated after building the Anchor program
-// Import from: target/types/cipherchat
-// For now, we'll use a generic type
-type CipherChatProgram = any;
+// After building, uncomment and use:
+// import { Cipherchat } from '../target/types/cipherchat';
+// import idl from '../target/idl/cipherchat.json';
 
 /**
  * CipherChat Program Client SDK
  * Provides easy-to-use methods for interacting with the CipherChat Solana program
+ * 
+ * Note: This client requires the program to be built first.
+ * Run `npm run anchor:build` to generate the IDL and types.
  */
 export class CipherChatClient {
-  private program: Program<CipherChatProgram>;
+  private program: Program | null = null;
   private provider: AnchorProvider;
+  private programId: PublicKey;
 
   constructor(
     connection: Connection,
     wallet: AnchorWallet,
-    programId: PublicKey
+    programId: PublicKey,
+    idl?: Idl
   ) {
     this.provider = new AnchorProvider(connection, wallet, {
       commitment: 'confirmed',
     });
+    this.programId = programId;
     
-    // Note: After building the program, import the IDL
+    // If IDL is provided, initialize the program
+    if (idl) {
+      this.program = new Program(idl, this.provider);
+    }
+    
+    // Note: After building the program, import and use the IDL:
     // import idl from '../target/idl/cipherchat.json';
-    // this.program = new Program(idl, programId, this.provider);
+    // Then pass it to the constructor or call initializeProgram(idl)
+  }
+
+  /**
+   * Initialize the program with an IDL
+   * Call this after building the Anchor program
+   */
+  initializeProgram(idl: Idl): void {
+    this.program = new Program(idl, this.provider);
+  }
+
+  /**
+   * Check if program is initialized
+   */
+  private ensureProgram(): Program {
+    if (!this.program) {
+      throw new Error(
+        'Program not initialized. Build the Anchor program first with `npm run anchor:build`, ' +
+        'then import the IDL and call initializeProgram(idl) or pass IDL to constructor.'
+      );
+    }
+    return this.program;
   }
 
   /**
@@ -64,12 +96,13 @@ export class CipherChatClient {
    * Register a user's X25519 messaging key
    */
   async registerMessagingKey(msgPubkey: Uint8Array): Promise<string> {
+    const program = this.ensureProgram();
     const [userMessagingKeyPDA] = CipherChatClient.findUserMessagingKeyPDA(
       this.provider.wallet.publicKey,
-      this.program.programId
+      this.programId
     );
 
-    const tx = await this.program.methods
+    const tx = await program.methods
       .registerMessagingKey(Array.from(msgPubkey))
       .accounts({
         userMessagingKey: userMessagingKeyPDA,
@@ -90,18 +123,19 @@ export class CipherChatClient {
     ttl: number,
     sequence: BN
   ): Promise<string> {
+    const program = this.ensureProgram();
     const [messageMetadataPDA] = CipherChatClient.findMessageMetadataPDA(
       recipient,
       sequence,
-      this.program.programId
+      this.programId
     );
 
     const [recipientKeyPDA] = CipherChatClient.findUserMessagingKeyPDA(
       recipient,
-      this.program.programId
+      this.programId
     );
 
-    const tx = await this.program.methods
+    const tx = await program.methods
       .postMessage(cid, Array.from(ephemeralPub), new BN(ttl), sequence)
       .accounts({
         messageMetadata: messageMetadataPDA,
@@ -118,12 +152,13 @@ export class CipherChatClient {
    * Revoke user's messaging key
    */
   async revokeKey(): Promise<string> {
+    const program = this.ensureProgram();
     const [userMessagingKeyPDA] = CipherChatClient.findUserMessagingKeyPDA(
       this.provider.wallet.publicKey,
-      this.program.programId
+      this.programId
     );
 
-    const tx = await this.program.methods
+    const tx = await program.methods
       .revokeKey()
       .accounts({
         userMessagingKey: userMessagingKeyPDA,
@@ -138,13 +173,14 @@ export class CipherChatClient {
    * Mark a message as read
    */
   async markMessageRead(sequence: BN): Promise<string> {
+    const program = this.ensureProgram();
     const [messageMetadataPDA] = CipherChatClient.findMessageMetadataPDA(
       this.provider.wallet.publicKey,
       sequence,
-      this.program.programId
+      this.programId
     );
 
-    const tx = await this.program.methods
+    const tx = await program.methods
       .markMessageRead()
       .accounts({
         messageMetadata: messageMetadataPDA,
@@ -158,14 +194,16 @@ export class CipherChatClient {
   /**
    * Fetch user's messaging key
    */
-  async getUserMessagingKey(wallet: PublicKey) {
+  async getUserMessagingKey(wallet: PublicKey): Promise<any | null> {
+    const program = this.ensureProgram();
     const [userMessagingKeyPDA] = CipherChatClient.findUserMessagingKeyPDA(
       wallet,
-      this.program.programId
+      this.programId
     );
 
     try {
-      return await this.program.account.userMessagingKey.fetch(
+      // @ts-ignore - Account types are generated after build
+      return await program.account.userMessagingKey.fetch(
         userMessagingKeyPDA
       );
     } catch (error) {
@@ -176,15 +214,17 @@ export class CipherChatClient {
   /**
    * Fetch a message by sequence number
    */
-  async getMessage(recipient: PublicKey, sequence: BN) {
+  async getMessage(recipient: PublicKey, sequence: BN): Promise<any | null> {
+    const program = this.ensureProgram();
     const [messageMetadataPDA] = CipherChatClient.findMessageMetadataPDA(
       recipient,
       sequence,
-      this.program.programId
+      this.programId
     );
 
     try {
-      return await this.program.account.messageMetadata.fetch(
+      // @ts-ignore - Account types are generated after build
+      return await program.account.messageMetadata.fetch(
         messageMetadataPDA
       );
     } catch (error) {
@@ -196,7 +236,7 @@ export class CipherChatClient {
    * Fetch all messages for a recipient
    * Note: This is a simplified version. In production, use getProgramAccounts with filters
    */
-  async getMessagesForRecipient(recipient: PublicKey, maxSequence: number = 100) {
+  async getMessagesForRecipient(recipient: PublicKey, maxSequence: number = 100): Promise<any[]> {
     const messages = [];
 
     for (let i = 0; i < maxSequence; i++) {
@@ -215,7 +255,8 @@ export class CipherChatClient {
   subscribeToMessages(
     callback: (message: any) => void,
     maxSequence: number = 1000
-  ) {
+  ): () => void {
+    const program = this.ensureProgram();
     const recipient = this.provider.wallet.publicKey;
 
     // Subscribe to account changes for potential message PDAs
@@ -225,13 +266,14 @@ export class CipherChatClient {
       const [messageMetadataPDA] = CipherChatClient.findMessageMetadataPDA(
         recipient,
         new BN(i),
-        this.program.programId
+        this.programId
       );
 
       const subId = this.provider.connection.onAccountChange(
         messageMetadataPDA,
         (accountInfo) => {
-          const message = this.program.coder.accounts.decode(
+          // @ts-ignore - Coder types are generated after build
+          const message = program.coder.accounts.decode(
             'messageMetadata',
             accountInfo.data
           );

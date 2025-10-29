@@ -1,3 +1,16 @@
+/**
+ * CipherChat Program Tests
+ * 
+ * NOTE: TypeScript errors in this file are expected until you build the Anchor program.
+ * 
+ * To fix the errors:
+ * 1. Run: npm run anchor:build
+ * 2. This will generate target/types/cipherchat.ts with proper types
+ * 3. The import on line 3 will work after the build
+ * 
+ * The test dependencies are already installed.
+ */
+
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Cipherchat } from "../target/types/cipherchat";
@@ -15,8 +28,8 @@ describe("cipherchat", () => {
   // Test keypairs
   let sender: Keypair;
   let recipient: Keypair;
-  let senderMessagingKey: Keypair;
-  let recipientMessagingKey: Keypair;
+  let senderMessagingKey: nacl.BoxKeyPair;
+  let recipientMessagingKey: nacl.BoxKeyPair;
 
   before(async () => {
     // Generate test wallets
@@ -239,7 +252,7 @@ describe("cipherchat", () => {
         .rpc();
 
       assert.fail("Should have thrown an error");
-    } catch (error) {
+    } catch (error: any) {
       assert.include(error.toString(), "RecipientKeyRevoked");
     }
   });
