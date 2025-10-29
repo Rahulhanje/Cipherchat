@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Anchor / Solana
+.anchor
+target/
+test-ledger/
+.DS_Store
+**/*.rs.bk
+*.so
+*.swp
